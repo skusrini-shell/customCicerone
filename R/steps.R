@@ -88,13 +88,20 @@ Cicerone <- R6::R6Class(
 #' @param close_btn_text Text on the close button.
 #' @param next_btn_text Next button text.
 #' @param prev_btn_text Previous button text.
+#' @param tab_id The id of the tabs to activate in order to highlight `tab_id`.
+#' @param tab The name of the tab to set.
+#' @param is_id Whether the selector passed to `el` is an HTML id, set to `FALSE` to use
+#' other selectors, e.g.: `.class`.
     step = function(el, title = NULL, description = NULL, position = NULL, 
       class = NULL, show_btns = NULL, close_btn_text = NULL,
-      next_btn_text = NULL, prev_btn_text = NULL) {
+      next_btn_text = NULL, prev_btn_text = NULL, tab = NULL, tab_id = NULL, is_id = TRUE) {
 
       assertthat::assert_that(!missing(el), msg = "Must pass `el`.")
 
-      el <- paste0("#", el)
+      assertthat::assert_that(tabs_ok(tab, tab_id))
+
+      if(is_id)
+        el <- paste0("#", el)
 
       popover <- list()
 
@@ -107,7 +114,7 @@ Cicerone <- R6::R6Class(
       if(!is.null(next_btn_text)) popover$nextBtnText <- next_btn_text
       if(!is.null(prev_btn_text)) popover$prevBtnText <- prev_btn_text
 
-      step = list(element = el)
+      step = list(element = el, tab_id = tab_id, tab = tab)
 
       if(length(popover)) step$popover <- popover
 
@@ -117,8 +124,8 @@ Cicerone <- R6::R6Class(
 #' @details
 #' Initialise Cicerone.
 #' 
-#' @param session A valid Shiny session if \code{NULL} the function
-#' attempts to get the session with \link[shiny]{getDefaultReactiveDomain}.
+#' @param session A valid Shiny session if `NULL` the function
+#' attempts to get the session with [shiny::getDefaultReactiveDomain()].
     init = function(session = NULL){
       if(is.null(session))
         session <- shiny::getDefaultReactiveDomain()
@@ -135,8 +142,8 @@ Cicerone <- R6::R6Class(
 #' @details
 #' Reset Cicerone.
 #' 
-#' @param session A valid Shiny session if \code{NULL} the function
-#' attempts to get the session with \link[shiny]{getDefaultReactiveDomain}.
+#' @param session A valid Shiny session if `NULL` the function
+#' attempts to get the session with [shiny::getDefaultReactiveDomain()].
     reset = function(session = NULL){
       if(is.null(session))
         session <- shiny::getDefaultReactiveDomain()
@@ -148,8 +155,8 @@ Cicerone <- R6::R6Class(
 #' 
 #' @param step The step index at which to start.
 #' 
-#' @param session A valid Shiny session if \code{NULL} the function
-#' attempts to get the session with \link[shiny]{getDefaultReactiveDomain}.
+#' @param session A valid Shiny session if `NULL` the function
+#' attempts to get the session with [shiny::getDefaultReactiveDomain()].
     start = function(step = 1, session = NULL){
       if(is.null(session))
         session <- shiny::getDefaultReactiveDomain()
@@ -161,8 +168,8 @@ Cicerone <- R6::R6Class(
 #' @details
 #' Move Cicerone one step.
 #' 
-#' @param session A valid Shiny session if \code{NULL} the function
-#' attempts to get the session with \link[shiny]{getDefaultReactiveDomain}.
+#' @param session A valid Shiny session if `NULL` the function
+#' attempts to get the session with [shiny::getDefaultReactiveDomain()].
     move_forward = function(session = NULL){
       if(is.null(session))
         session <- shiny::getDefaultReactiveDomain()
@@ -172,8 +179,8 @@ Cicerone <- R6::R6Class(
 #' @details
 #' Move Cicerone one step backward.
 #' 
-#' @param session A valid Shiny session if \code{NULL} the function
-#' attempts to get the session with \link[shiny]{getDefaultReactiveDomain}.
+#' @param session A valid Shiny session if `NULL` the function
+#' attempts to get the session with [shiny::getDefaultReactiveDomain()].
     move_backward = function(session = NULL){
       if(is.null(session))
         session <- shiny::getDefaultReactiveDomain()
@@ -184,23 +191,27 @@ Cicerone <- R6::R6Class(
 #' Highlight a specific step.
 #' 
 #' @param el Id of element to highlight
-#' @param session A valid Shiny session if \code{NULL} the function
-#' attempts to get the session with \link[shiny]{getDefaultReactiveDomain}.
-    highlight = function(el, session = NULL){
+#' @param session A valid Shiny session if `NULL` the function
+#' attempts to get the session with [shiny::getDefaultReactiveDomain()].
+#' @param is_id Whether the selector passed to `el` is an HTML id, set to `FALSE` to use
+#' other selectors, e.g.: `.class`.
+    highlight = function(el, session = NULL, is_id = TRUE){
       assertthat::assert_that(!missing(el), msg = "Must pass `el`.")
       if(is.null(session))
         session <- shiny::getDefaultReactiveDomain()
       
-      el <- paste0("#", el)
+      if(is_id)
+        el <- paste0("#", el)
       session$sendCustomMessage("cicerone-highlight", list(el = el, id = private$id))
       invisible(self)
     },
 #' @details
 #' Retrieve the id of the currently highlighted element.
 #' 
-#' @param session A valid Shiny session if \code{NULL} the function
-#' attempts to get the session with \link[shiny]{getDefaultReactiveDomain}.
+#' @param session A valid Shiny session if `NULL` the function
+#' attempts to get the session with [shiny::getDefaultReactiveDomain()].
     get_highlighted_el = function(session = NULL){
+      .Deprecated("get_next", package = "cicerone", "Use the `get_next` or `get_previous`")
       if(is.null(session))
         session <- shiny::getDefaultReactiveDomain()
       session$sendCustomMessage("cicerone-get-highlighted", list(el = el, id = private$id))
@@ -214,9 +225,10 @@ Cicerone <- R6::R6Class(
 #' @details
 #' Retrieve the id of the previously highlighted element.
 #' 
-#' @param session A valid Shiny session if \code{NULL} the function
-#' attempts to get the session with \link[shiny]{getDefaultReactiveDomain}.
+#' @param session A valid Shiny session if `NULL` the function
+#' attempts to get the session with [shiny::getDefaultReactiveDomain()].
     get_previous_el = function(session = NULL){
+      .Deprecated("get_next", package = "cicerone", "Use the `get_next` or `get_previous`")
       if(is.null(session))
         session <- shiny::getDefaultReactiveDomain()
       session$sendCustomMessage("cicerone-get-previous", list(el = el, id = private$id))
@@ -230,9 +242,10 @@ Cicerone <- R6::R6Class(
 #' @details
 #' Retrieve whether there is a next step.
 #' 
-#' @param session A valid Shiny session if \code{NULL} the function
-#' attempts to get the session with \link[shiny]{getDefaultReactiveDomain}.
+#' @param session A valid Shiny session if `NULL` the function
+#' attempts to get the session with [shiny::getDefaultReactiveDomain()].
     has_next_step = function(session = NULL){
+      .Deprecated("get_next", package = "cicerone", "Use the `get_next` or `get_previous`")
       if(is.null(session))
         session <- shiny::getDefaultReactiveDomain()
       session$sendCustomMessage("cicerone-has-next", list(el = el, id = private$id))
@@ -242,6 +255,28 @@ Cicerone <- R6::R6Class(
         invisible(NULL)
 
       gsub("#", "", id)
+    },
+#' @details Retrieve data that was fired when the user hit the "next" button.
+#' 
+#' @param session A valid Shiny session if `NULL` the function
+#' attempts to get the session with [shiny::getDefaultReactiveDomain()].
+    get_next = function(session = NULL){
+      if(is.null(session))
+        session <- shiny::getDefaultReactiveDomain()
+      
+      grab <- paste0(private$id, "_cicerone_next")
+      session$input[[grab]]
+    },
+#' @details Retrieve data that was fired when the user hit the "previous" button.
+#' 
+#' @param session A valid Shiny session if `NULL` the function
+#' attempts to get the session with [shiny::getDefaultReactiveDomain()].
+    get_previous = function(session = NULL){
+      if(is.null(session))
+        session <- shiny::getDefaultReactiveDomain()
+
+      grab <- paste0(private$id, "_cicerone_previous")
+      session$input[[grab]]
     }
   ),
   private = list(
