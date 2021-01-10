@@ -42,13 +42,15 @@ Cicerone <- R6::R6Class(
 #' to close, arrow keys to move).
 #' @param id A unique identifier, useful if you are using more than one
 #' cicerone.
+#' @param mathjax Whether to use MathJax in the steps.
 #' 
 #' @return A Cicerone object.
   public = list(
     initialize = function(animate = TRUE, opacity = .75, padding = 10,
       allow_close = TRUE, overlay_click_next  = FALSE, done_btn_text = "Done",
       close_btn_text = "Close", stage_background = "#ffffff", next_btn_text = "Next",
-      prev_btn_text = "Previous", show_btns = TRUE, keyboard_control = TRUE, id = NULL) {
+      prev_btn_text = "Previous", show_btns = TRUE, keyboard_control = TRUE, id = NULL,
+      mathjax = FALSE) {
 
       if(is.null(id))
         id <- generate_id()
@@ -70,6 +72,7 @@ Cicerone <- R6::R6Class(
       )
 
       private$id <- id
+      private$mathjax <- mathjax
 
       invisible(self)
     },
@@ -92,11 +95,18 @@ Cicerone <- R6::R6Class(
 #' @param tab The name of the tab to set.
 #' @param is_id Whether the selector passed to `el` is an HTML id, set to `FALSE` to use
 #' other selectors, e.g.: `.class`.
+#' @param on_highlighted A JavaScript function to run when the step is highlighted,
+#' generally a callback function. This is effectively a string that is evaluated JavaScript-side.
+#' @param on_highlight_started A JavaScript function to run when the step is just aobut to be 
+#' highlighted, generally a callback function. This is effectively a string that is evaluated JavaScript-side.
+#' @param on_next A JavaScript function to run when the next button is clicked (or its event triggered), 
+#' generally a callback function. This is effectively a string that is evaluated JavaScript-side.
     step = function(el, title = NULL, description = NULL, position = NULL, 
       class = NULL, show_btns = NULL, close_btn_text = NULL,
-      next_btn_text = NULL, prev_btn_text = NULL, tab = NULL, tab_id = NULL, is_id = TRUE) {
+      next_btn_text = NULL, prev_btn_text = NULL, tab = NULL, tab_id = NULL, is_id = TRUE,
+      on_highlighted = NULL, on_highlight_started = NULL, on_next = NULL) {
 
-      assertthat::assert_that(!missing(el), msg = "Must pass `el`.")
+      assertthat::assert_that(!missing(el), msg = "Must pass `el`")
 
       assertthat::assert_that(tabs_ok(tab, tab_id))
 
@@ -105,9 +115,9 @@ Cicerone <- R6::R6Class(
 
       popover <- list()
 
-      if(!is.null(class)) popover$className <- class
-      if(!is.null(title)) popover$title <- title
-      if(!is.null(description)) popover$description <- description
+      if(!is.null(class)) popover$className <- as.character(class)
+      if(!is.null(title)) popover$title <- as.character(title)
+      if(!is.null(description)) popover$description <- as.character(description)
       if(!is.null(position)) popover$position <- position
       if(!is.null(show_btns)) popover$showButtons <- show_btns
       if(!is.null(close_btn_text)) popover$closeBtnText <- close_btn_text
@@ -115,6 +125,18 @@ Cicerone <- R6::R6Class(
       if(!is.null(prev_btn_text)) popover$prevBtnText <- prev_btn_text
 
       step = list(element = el, tab_id = tab_id, tab = tab)
+
+      if(private$mathjax) {
+        step$onHighlighted <- paste0("function(element){setTimeout(function(){
+          MathJax.Hub.Queue(['Typeset', MathJax.Hub]);
+        }, 300);", on_highlighted, "}")
+        
+      } else {
+        if(!is.null(on_highlighted)) step$onHighlighted <- on_highlighted
+      }
+      
+      if(!is.null(on_highlight_started)) step$onHighlightStarted <- on_highlight_started
+      if(!is.null(on_next)) step$onNext <- on_next
 
       if(length(popover)) step$popover <- popover
 
@@ -282,6 +304,7 @@ Cicerone <- R6::R6Class(
   private = list(
     steps = list(),
     globals = list(),
-    id = NULL
+    id = NULL,
+    mathjax = FALSE
   )
 )
